@@ -1,0 +1,71 @@
+#include <WiFi.h>
+#include "DHT.h" 
+#define DHT_Pin 18 
+#define DHT_Type DHT11
+DHT dht(DHT_Pin, DHT_Type);
+
+float humidity = 0.0f;
+float tempC = 0.0f;
+//char ssid[]="Buffalo-G-64A0-WPA3";
+//char pass[]="ie53p3jih88y7";
+char ssid[]="OpenCampusDemonstration";
+char pass[]="";
+int status = WL_IDLE_STATUS;
+char server[] = "172.20.168.110";
+String postData;
+String postHead1 = "temp=";
+String postHead2 = "&humi=";
+
+WiFiClient client;
+
+void setup(){
+  Serial.begin(115200);
+  while (status != WL_CONNECTED){
+    Serial.print("Attempting:");
+    Serial.println(ssid);
+    status = WiFi.begin(ssid, pass);
+    delay(10000);
+  }
+  Serial.print("SSID:");
+  Serial.println(WiFi.SSID());
+  IPAddress ip(172, 20, 168, 113);
+  IPAddress gateway(172, 20, 168, 1);
+  IPAddress subnet(255, 255, 0, 0);
+  IPAddress DNS(172, 16, 1, 30);
+  Serial.print("IP Address: ");
+  Serial.println(ip);
+  dht.begin();
+  Serial.println(server);
+  Serial.print("Connect to Server: ");
+  Serial.println(client.connect(server, 80));
+  WiFi.config(ip, gateway, subnet, DNS);
+}
+
+void loop(){
+
+  humidity = dht.readHumidity();
+  tempC = dht.readTemperature();
+
+  Serial.print(tempC);
+  Serial.println(humidity);
+
+  postData = postHead1 + tempC + postHead2 + humidity;
+
+  if (client.connect(server, 80)){
+    Serial.print("Connected");
+    client.println("POST /hsp/b2182090/hangai.php HTTP/1.1");
+    client.println("Host: 172.20.168.110");
+    client.println("Accept: */*");
+    client.println("Content-Type: application/x-www-form-urlencoded");
+    client.print("Content-Length: ");
+    client.println(postData.length());
+    client.println();
+    client.print(postData);
+    Serial.println(postData);
+  }
+  if(client.connected()){
+    client.stop();
+  }
+  Serial.println(postData);
+  delay(10000);
+}
